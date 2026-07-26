@@ -4,4 +4,5 @@ from django.contrib import admin
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/", include("department.urls")),
+    path("api/", include("employees.urls")),
 ]
