@@ -26,6 +26,13 @@ class EmployeeAPITestCase(TestCase):
             password="testpass123",
             role=User.Role.EMPLOYEE,
         )
+        self.hr = User.objects.create_user(
+            email="hr@test.com",
+            username="hr",
+            password="testpass123",
+            role=User.Role.HR,    
+)
+
 
         self.department = Department.objects.create(
             name="Information Tech",
@@ -53,6 +60,14 @@ class EmployeeAPITestCase(TestCase):
             joining_date=date(2026, 2, 1),
             phone_number="9800000002",
         )
+        self.hr_employee = Employee.objects.create(
+            user=self.hr,
+            department=self.department,
+            designation=self.designation,
+            salary=40000,
+            joining_date=date(2026, 3, 1),
+            phone_number="9800000003",
+)
         
     def test_admin_can_see_all_employees(self):
         self.client.force_authenticate(user=self.admin)
@@ -60,7 +75,7 @@ class EmployeeAPITestCase(TestCase):
         response = self.client.get("/api/employees/")
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data["count"], 2)
+        self.assertEqual(response.data["count"], 3)
         
     def test_employee_can_only_see_themselves(self):
         self.client.force_authenticate(user=self.employee_user)
@@ -160,3 +175,30 @@ class EmployeeAPITestCase(TestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertIn("joining_date", response.data)
+        
+    def test_hr_can_see_all_employees(self):
+        self.client.force_authenticate(user=self.hr)
+
+        response = self.client.get("/api/employees/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["count"], 3)
+
+        salaries = [
+            employee["salary"]
+            for employee in response.data["results"]
+    ]
+
+        self.assertIn("50000.00", salaries)
+        self.assertIn("40000.00", salaries)
+        self.assertIn("30000.00", salaries)
+    
+    def test_employee_can_see_own_salary(self):
+        self.client.force_authenticate(user=self.employee_user)
+
+        response = self.client.get(
+        f"/api/employees/{self.employee.id}/"
+    )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["salary"], "30000.00")
